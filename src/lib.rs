@@ -114,25 +114,66 @@ impl Matrix {
 #[cfg(target_feature = "sse3")]
 fn multiply(a: &[f32], b: &[f32]) -> f32 {
     unsafe {
-        let a_ = arr_pad(a);
-        let b_ = arr_pad(b);
+        // let a_ = arr_pad(a);
+        // let b_ = arr_pad(b);
         let mut result = 0.0;
-        for set_a in a_.chunks(4) {
-            let r = _mm_loadu_ps(set_a.as_ptr());
-            for set_b in b_.chunks(4) {
-                let c = _mm_loadu_ps(set_b.as_ptr());
-                let imm = _mm_mul_ps(r, c);
-                let res = _mm_hadd_ps(imm, imm);
-                let res = _mm_hadd_ps(res, res);
-                let xs: [f32; 4] = std::mem::transmute(res);
-                // println!("a {:?} b {:?}", set_a, set_b);
-                // println!("sets {:?} {:?} {:?} {:?}", r, c, imm, res);
-                result = result + xs[0];
-            }
+
+        let mut i_buf = BUF([0.0; 4]);
+        let mut j_buf = BUF([0.0; 4]);
+
+        for i in 0..a.len() {
+            i_buf.0[i % 4] = a[i];
+            j_buf.0[i % 4] = b[i];
+            // // println!("i {} {} {}", i, (i+1) != 0, (i+1) % 4 == 0);
+            // if (i+1) != 0 && (i +1) % 4 == 0 {
+            //     for j in 0..b_.len() {
+            //         // println!("{:?}", j_buf.0);
+            //         if (j+1) != 0 && (j+1) % 4 == 0 {
+            //             // println!("{} {}", i, j);
+            //             let r = _mm_loadu_ps(i_buf.0.as_ptr());
+            //             let c = _mm_loadu_ps(j_buf.0.as_ptr());
+            //             let imm = _mm_mul_ps(r, c);
+            //             let res = _mm_hadd_ps(imm, imm);
+            //             let res = _mm_hadd_ps(res, res);
+            //             let xs: [f32; 4] = std::mem::transmute(res);
+            //             // println!("a {:?} b {:?}", i_buf.0, j_buf.0);
+            //             // println!("sets {:?} {:?} {:?} {:?}", r, c, imm, res);
+            //             result = result + xs[0];
+            //         }
+            //     }   
+            // }
+
+            if (i + 1) % 4 != 0 || i == 0 { continue; }
+
+            let r = _mm_loadu_ps(i_buf.0.as_ptr());
+            let c = _mm_loadu_ps(j_buf.0.as_ptr());
+            let imm = _mm_mul_ps(r, c);
+            let res = _mm_hadd_ps(imm, imm);
+            let res = _mm_hadd_ps(res, res);
+            let xs: [f32; 4] = std::mem::transmute(res);
+            // println!("a {:?} b {:?}", i_buf.0, j_buf.0);
+            // println!("sets {:?} {:?} {:?} {:?}", r, c, imm, res);
+            result = result + xs[0];
         }
+        // for set_a in a_.chunks(4) {
+        //     let r = _mm_loadu_ps(set_a.as_ptr());
+        //     for set_b in b_.chunks(4) {
+        //         let c = _mm_loadu_ps(set_b.as_ptr());
+        //         let imm = _mm_mul_ps(r, c);
+        //         let res = _mm_hadd_ps(imm, imm);
+        //         let res = _mm_hadd_ps(res, res);
+        //         let xs: [f32; 4] = std::mem::transmute(res);
+        //         // println!("a {:?} b {:?}", set_a, set_b);
+        //         // println!("sets {:?} {:?} {:?} {:?}", r, c, imm, res);
+        //         result = result + xs[0];
+        //     }
+        // }
         return result;
     }
 }
+
+#[repr(packed)]
+struct BUF([f32; 4]);
 
 fn arr_pad(xs: &[f32]) -> Vec<f32> {
     let mut v = xs.to_vec();
