@@ -3,8 +3,8 @@ use lib::Matrix;
 use std::time::Instant;
 
 fn main() {
-    let a0 = 100;
-    let b0 = 100;
+    let a0 = 32;
+    let b0 = 32;
     let a1 = b0;
     let b1 = a0;
 
