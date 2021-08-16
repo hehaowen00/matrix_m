@@ -1,9 +1,8 @@
-use rand::prelude::*;
+// #![feature(iter_zip)]
+
 #[cfg(target_feature = "sse")]
 use std::arch::x86_64::*;
-
-#![feature(iter_zip)]
-
+use rand::prelude::*;
 
 #[derive(Debug, PartialEq)]
 pub struct Matrix {
@@ -46,11 +45,14 @@ impl Matrix {
 
     #[cfg(target_feature = "sse3")]
     pub fn mul(&self, rhs: &mut Self, result: &mut Self) {
-        let mut col = Vec::with_capacity(rhs.rows);
+        // let mut col = Vec::with_capacity(rhs.rows);
+        assert_eq!(self.cols, 100);
+        let mut r = [0.0; 100];
         let mut col = [0.0; 100];
         for i in 0..self.rows {
             let start = i * self.cols;
             let row = &self.data[start..start + self.cols];
+            assert_eq!(row.len(), 100);
 
             for j in 0..rhs.cols {
                 for k in 0..rhs.rows {
@@ -58,9 +60,10 @@ impl Matrix {
                     col[k] = rhs.data[k * rhs.cols + j];
                 }
 
-                let total = dot_product(&row, &col);
+                // let r: [f32; 100] = make_array(row);
+                r.copy_from_slice(row);
+                let total = dot_product(&r, &col);
                 result.data[i * rhs.cols + j] = total;
-                col.clear();
             }
         }
     }
@@ -83,6 +86,15 @@ impl Matrix {
         }
     }
 }
+
+// fn make_array<A, T>(slice: &[T]) -> A
+// where
+//     A: Sized + Default + AsMut<[T]>,
+//     T: Copy
+// {
+//     let mut a = Default::default();
+//     <A as AsMut<[T]>>::as_mut(&mut a).copy_from_slice(slice)
+// }
 
 // // assumes 4x4 matrix
 // // #[cfg(target_feature = "sse3")]
@@ -219,12 +231,13 @@ impl Matrix {
 //     }
 // }
 
+
 #[cfg(target_feature = "sse3")]
 fn dot_product<const N: usize>(a: &[f32; N], b: &[f32; N]) -> f32 {
     unsafe {
         let mut result = 0.0;
 
-        for (a_slice, b_slice) in zip(a.chunks_exact(4), b.chunks_exact(4)) {
+        for (a_slice, b_slice) in a.chunks_exact(4).zip(b.chunks_exact(4)) {
             let r = _mm_loadu_ps(a_slice.as_ptr());
             let c = _mm_loadu_ps(b_slice.as_ptr());
             let imm = _mm_mul_ps(r, c);
@@ -237,4 +250,3 @@ fn dot_product<const N: usize>(a: &[f32; N], b: &[f32; N]) -> f32 {
         return result
     }
 }
-

@@ -1,3 +1,4 @@
+#![feature(iter_zip)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use matrix_m::Matrix;
 
