@@ -1,3 +1,5 @@
+#![feature(iter_zip)]
+
 mod lib;
 use lib::Matrix;
 use std::time::Instant;
